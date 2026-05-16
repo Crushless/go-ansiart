@@ -194,48 +194,68 @@ func decompressImageData(buf []byte, imageLen int) ([]byte, []byte, error) {
 			return nil, nil, fmt.Errorf("xbin compressed run expands past image data length")
 		}
 
+		var err error
 		switch mode {
 		case 0:
-			byteCount := cellCount * xBinCellLen
-			if len(buf) < byteCount {
-				return nil, nil, fmt.Errorf("xbin compressed literal run: need %d bytes, got %d", byteCount, len(buf))
-			}
-			out = append(out, buf[:byteCount]...)
-			buf = buf[byteCount:]
+			out, buf, err = decompressLiteralRun(out, buf, cellCount)
 		case 1:
-			if len(buf) < 1+cellCount {
-				return nil, nil, fmt.Errorf("xbin compressed character run: need %d bytes, got %d", 1+cellCount, len(buf))
-			}
-			character := buf[0]
-			attrs := buf[1 : 1+cellCount]
-			for _, attr := range attrs {
-				out = append(out, character, attr)
-			}
-			buf = buf[1+cellCount:]
+			out, buf, err = decompressCharacterRun(out, buf, cellCount)
 		case 2:
-			if len(buf) < 1+cellCount {
-				return nil, nil, fmt.Errorf("xbin compressed attribute run: need %d bytes, got %d", 1+cellCount, len(buf))
-			}
-			attr := buf[0]
-			chars := buf[1 : 1+cellCount]
-			for _, character := range chars {
-				out = append(out, character, attr)
-			}
-			buf = buf[1+cellCount:]
+			out, buf, err = decompressAttributeRun(out, buf, cellCount)
 		case 3:
-			if len(buf) < xBinCellLen {
-				return nil, nil, fmt.Errorf("xbin compressed character/attribute run: need %d bytes, got %d", xBinCellLen, len(buf))
-			}
-			character := buf[0]
-			attr := buf[1]
-			for range cellCount {
-				out = append(out, character, attr)
-			}
-			buf = buf[xBinCellLen:]
+			out, buf, err = decompressCellRun(out, buf, cellCount)
+		}
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
 	return out, buf, nil
+}
+
+func decompressLiteralRun(out []byte, buf []byte, cellCount int) ([]byte, []byte, error) {
+	byteCount := cellCount * xBinCellLen
+	if len(buf) < byteCount {
+		return nil, nil, fmt.Errorf("xbin compressed literal run: need %d bytes, got %d", byteCount, len(buf))
+	}
+	out = append(out, buf[:byteCount]...)
+	return out, buf[byteCount:], nil
+}
+
+func decompressCharacterRun(out []byte, buf []byte, cellCount int) ([]byte, []byte, error) {
+	if len(buf) < 1+cellCount {
+		return nil, nil, fmt.Errorf("xbin compressed character run: need %d bytes, got %d", 1+cellCount, len(buf))
+	}
+	character := buf[0]
+	attrs := buf[1 : 1+cellCount]
+	for _, attr := range attrs {
+		out = append(out, character, attr)
+	}
+	return out, buf[1+cellCount:], nil
+}
+
+func decompressAttributeRun(out []byte, buf []byte, cellCount int) ([]byte, []byte, error) {
+	if len(buf) < 1+cellCount {
+		return nil, nil, fmt.Errorf("xbin compressed attribute run: need %d bytes, got %d", 1+cellCount, len(buf))
+	}
+	attr := buf[0]
+	chars := buf[1 : 1+cellCount]
+	for _, character := range chars {
+		out = append(out, character, attr)
+	}
+	return out, buf[1+cellCount:], nil
+}
+
+func decompressCellRun(out []byte, buf []byte, cellCount int) ([]byte, []byte, error) {
+	if len(buf) < xBinCellLen {
+		return nil, nil, fmt.Errorf("xbin compressed character/attribute run: need %d bytes, got %d", xBinCellLen, len(buf))
+	}
+	character := buf[0]
+	attr := buf[1]
+	for range cellCount {
+		out = append(out, character, attr)
+	}
+	return out, buf[xBinCellLen:], nil
 }
 
 func (xb *xBin) palette() [16]color_modes.Color {

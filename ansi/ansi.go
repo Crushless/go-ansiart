@@ -151,61 +151,43 @@ func (screen *ansiScreen) parseEscape(data []byte, start int) (int, bool) {
 }
 
 func (screen *ansiScreen) applyEscape(final byte, values []int) {
+	if screen.applyCursorEscape(final, values) {
+		return
+	}
+	if screen.applyEditEscape(final, values) {
+		return
+	}
+	screen.applySavedPositionEscape(final)
+}
+
+func (screen *ansiScreen) applyCursorEscape(final byte, values []int) bool {
 	switch final {
 	case 'A':
-		screen.y -= ansiValue(values, 0, 1)
-		if screen.y < 0 {
-			screen.y = 0
-		}
-		screen.pendingWrap = false
+		screen.moveVertical(-ansiValue(values, 0, 1))
 	case 'B':
-		screen.y += ansiValue(values, 0, 1)
-		screen.updateMaxY()
-		screen.pendingWrap = false
+		screen.moveVertical(ansiValue(values, 0, 1))
 	case 'C':
-		screen.applyPendingWrap()
-		screen.x += ansiValue(values, 0, 1)
-		if screen.x >= screen.columns {
-			screen.x = screen.columns - 1
-		}
-		screen.pendingWrap = false
+		screen.moveHorizontal(ansiValue(values, 0, 1), true)
 	case 'D':
-		screen.x -= ansiValue(values, 0, 1)
-		if screen.x < 0 {
-			screen.x = 0
-		}
-		screen.pendingWrap = false
+		screen.moveHorizontal(-ansiValue(values, 0, 1), false)
 	case 'E':
-		screen.y += ansiValue(values, 0, 1)
-		screen.x = 0
-		screen.updateMaxY()
-		screen.pendingWrap = false
+		screen.moveNextLine(ansiValue(values, 0, 1))
 	case 'F':
-		screen.y -= ansiValue(values, 0, 1)
-		if screen.y < 0 {
-			screen.y = 0
-		}
-		screen.x = 0
-		screen.pendingWrap = false
+		screen.movePreviousLine(ansiValue(values, 0, 1))
 	case 'G', '`':
-		col := ansiValue(values, 0, 1)
-		screen.x = min(max(col-1, 0), screen.columns-1)
-		screen.pendingWrap = false
+		screen.moveToColumn(ansiValue(values, 0, 1))
 	case 'H', 'f':
-		row := ansiValue(values, 0, 1)
-		col := ansiValue(values, 1, 1)
-		screen.y = max(row-1, 0)
-		screen.x = min(max(col-1, 0), screen.columns-1)
-		screen.updateMaxY()
-		screen.pendingWrap = false
+		screen.moveToPosition(ansiValue(values, 0, 1), ansiValue(values, 1, 1))
+	default:
+		return false
+	}
+	return true
+}
+
+func (screen *ansiScreen) applyEditEscape(final byte, values []int) bool {
+	switch final {
 	case 'J':
-		if ansiValue(values, 0, 0) == 2 {
-			screen.cells = nil
-			screen.x = 0
-			screen.y = 0
-			screen.maxY = 0
-			screen.pendingWrap = false
-		}
+		screen.clearScreen(ansiValue(values, 0, 0))
 	case 'K':
 		screen.clearLine(ansiValue(values, 0, 0))
 	case '@':
@@ -218,17 +200,80 @@ func (screen *ansiScreen) applyEscape(final byte, values []int) {
 		screen.repeatLastCharacter(ansiValue(values, 0, 1))
 	case 'm':
 		screen.applySGR(values)
+	default:
+		return false
+	}
+	return true
+}
+
+func (screen *ansiScreen) applySavedPositionEscape(final byte) {
+	switch final {
 	case 's':
 		screen.savedX = screen.x
 		screen.savedY = screen.y
 		screen.hasSaved = true
 	case 'u':
-		if screen.hasSaved {
-			screen.x = screen.savedX
-			screen.y = screen.savedY
-			screen.pendingWrap = false
-		}
+		screen.restorePosition()
 	}
+}
+
+func (screen *ansiScreen) restorePosition() {
+	if !screen.hasSaved {
+		return
+	}
+	screen.x = screen.savedX
+	screen.y = screen.savedY
+	screen.pendingWrap = false
+}
+
+func (screen *ansiScreen) moveVertical(delta int) {
+	screen.y += delta
+	if screen.y < 0 {
+		screen.y = 0
+	}
+	screen.updateMaxY()
+	screen.pendingWrap = false
+}
+
+func (screen *ansiScreen) moveHorizontal(delta int, applyWrap bool) {
+	if applyWrap {
+		screen.applyPendingWrap()
+	}
+	screen.x += delta
+	screen.x = min(max(screen.x, 0), screen.columns-1)
+	screen.pendingWrap = false
+}
+
+func (screen *ansiScreen) moveNextLine(count int) {
+	screen.moveVertical(count)
+	screen.x = 0
+}
+
+func (screen *ansiScreen) movePreviousLine(count int) {
+	screen.moveVertical(-count)
+	screen.x = 0
+}
+
+func (screen *ansiScreen) moveToColumn(col int) {
+	screen.x = min(max(col-1, 0), screen.columns-1)
+	screen.pendingWrap = false
+}
+
+func (screen *ansiScreen) moveToPosition(row int, col int) {
+	screen.y = max(row-1, 0)
+	screen.moveToColumn(col)
+	screen.updateMaxY()
+}
+
+func (screen *ansiScreen) clearScreen(mode int) {
+	if mode != 2 {
+		return
+	}
+	screen.cells = nil
+	screen.x = 0
+	screen.y = 0
+	screen.maxY = 0
+	screen.pendingWrap = false
 }
 
 func (screen *ansiScreen) applySGR(values []int) {
@@ -237,82 +282,117 @@ func (screen *ansiScreen) applySGR(values []int) {
 	}
 	for i := 0; i < len(values); i++ {
 		value := values[i]
-		switch {
-		case value == 0:
-			screen.resetAttributes()
-		case value == 1:
-			screen.bold = true
-		case value == 5:
-			screen.blink = true
-			screen.highBackground = true
-		case value == 7:
-			screen.inverse = true
-		case value == 22:
-			screen.bold = false
-		case value == 21 || value == 25:
-			screen.blink = false
-		case value == 27:
-			screen.inverse = false
-		case value == 39:
-			screen.fg = 7
-			screen.fgRGB = color_modes.Override{}
-		case value == 49:
-			screen.bg = 0
-			screen.bgRGB = color_modes.Override{}
-		case value >= 30 && value <= 37:
-			screen.fg = ansiToXBinColorIndex[value-30]
-			screen.fgRGB = color_modes.Override{}
-		case value >= 40 && value <= 47:
-			screen.bg = ansiToXBinColorIndex[value-40]
-			screen.bgRGB = color_modes.Override{}
-		case value >= 90 && value <= 97:
-			screen.fg = ansiToXBinColorIndex[value-90] + 8
-			screen.fgRGB = color_modes.Override{}
-		case value >= 100 && value <= 107:
-			screen.bg = ansiToXBinColorIndex[value-100] + 8
-			screen.bgRGB = color_modes.Override{}
-			screen.highBackground = true
-		case (value == 38 || value == 48) && i+2 < len(values) && values[i+1] == 5:
-			index := clampANSIColor(values[i+2])
-			override := color_modes.Override{
-				Index:   index,
-				Set:     true,
-				Indexed: true,
-			}
-			if index < 16 {
-				color := ansiToXBinColorIndex[index]
-				if value == 38 {
-					screen.fg = color
-				} else {
-					screen.bg = color
-					if color >= 8 {
-						screen.highBackground = true
-					}
-				}
-			}
-			if value == 38 {
-				screen.fgRGB = override
-			} else {
-				screen.bgRGB = override
-			}
+		if screen.applyBasicSGR(value) {
+			continue
+		}
+		if screen.applyPaletteSGR(value) {
+			continue
+		}
+		if (value == 38 || value == 48) && i+2 < len(values) && values[i+1] == 5 {
+			screen.applyIndexedSGR(value, values[i+2])
 			i += 2
-		case (value == 38 || value == 48) && i+4 < len(values) && values[i+1] == 2:
-			color := color_modes.Override{
-				Color: color_modes.Color{
-					R: byte(clampANSIColor(values[i+2])),
-					G: byte(clampANSIColor(values[i+3])),
-					B: byte(clampANSIColor(values[i+4])),
-				},
-				Set: true,
-			}
-			if value == 38 {
-				screen.fgRGB = color
-			} else {
-				screen.bgRGB = color
-			}
+			continue
+		}
+		if (value == 38 || value == 48) && i+4 < len(values) && values[i+1] == 2 {
+			screen.applyRGBSGR(value, values[i+2], values[i+3], values[i+4])
 			i += 4
 		}
 	}
+}
+
+func (screen *ansiScreen) applyBasicSGR(value int) bool {
+	switch value {
+	case 0:
+		screen.resetAttributes()
+	case 1:
+		screen.bold = true
+	case 5:
+		screen.blink = true
+		screen.highBackground = true
+	case 7:
+		screen.inverse = true
+	case 22:
+		screen.bold = false
+	case 21, 25:
+		screen.blink = false
+	case 27:
+		screen.inverse = false
+	case 39:
+		screen.fg = 7
+		screen.fgRGB = color_modes.Override{}
+	case 49:
+		screen.bg = 0
+		screen.bgRGB = color_modes.Override{}
+	default:
+		return false
+	}
+	return true
+}
+
+func (screen *ansiScreen) applyPaletteSGR(value int) bool {
+	switch {
+	case value >= 30 && value <= 37:
+		screen.setForegroundColor(ansiToXBinColorIndex[value-30])
+	case value >= 40 && value <= 47:
+		screen.setBackgroundColor(ansiToXBinColorIndex[value-40])
+	case value >= 90 && value <= 97:
+		screen.setForegroundColor(ansiToXBinColorIndex[value-90] + 8)
+	case value >= 100 && value <= 107:
+		screen.setBackgroundColor(ansiToXBinColorIndex[value-100] + 8)
+	default:
+		return false
+	}
+	return true
+}
+
+func (screen *ansiScreen) setForegroundColor(color byte) {
+	screen.fg = color
+	screen.fgRGB = color_modes.Override{}
+}
+
+func (screen *ansiScreen) setBackgroundColor(color byte) {
+	screen.bg = color
+	screen.bgRGB = color_modes.Override{}
+	if color >= 8 {
+		screen.highBackground = true
+	}
+}
+
+func (screen *ansiScreen) applyIndexedSGR(target int, indexValue int) {
+	index := clampANSIColor(indexValue)
+	override := color_modes.Override{
+		Index:   index,
+		Set:     true,
+		Indexed: true,
+	}
+	if target == 38 {
+		screen.fgRGB = override
+		if index < 16 {
+			screen.fg = ansiToXBinColorIndex[index]
+		}
+		return
+	}
+
+	screen.bgRGB = override
+	if index < 16 {
+		screen.setBackgroundColor(ansiToXBinColorIndex[index])
+	}
+}
+
+func (screen *ansiScreen) applyRGBSGR(target int, r int, g int, b int) {
+	color := color_modes.Override{
+		Color: color_modes.Color{
+			R: byte(clampANSIColor(r)),
+			G: byte(clampANSIColor(g)),
+			B: byte(clampANSIColor(b)),
+		},
+		Set: true,
+	}
+	if target == 38 {
+		screen.fgRGB = color
+		return
+	}
+	screen.bgRGB = color
 }
 
 func (screen *ansiScreen) put(char byte) {

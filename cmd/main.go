@@ -56,26 +56,31 @@ func main() {
 	}
 
 	for _, fileName := range fileNames {
-		data, err := os.ReadFile(fileName)
-		if err != nil {
+		if err := processFile(fileName, options); err != nil {
 			fmt.Println(err)
 			continue
-		}
-		img, err := parseImage(data, options)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		rendered, err := renderImage(img, options)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Print(rendered)
-		if args.Output == "ansi" {
-			fmt.Println()
 		}
 	}
+}
+
+func processFile(fileName string, options xbin.Options) error {
+	data, err := os.ReadFile(fileName)
+	if err != nil {
+		return err
+	}
+	img, err := parseImage(data, options)
+	if err != nil {
+		return err
+	}
+	rendered, err := renderImage(img, options)
+	if err != nil {
+		return err
+	}
+	fmt.Print(rendered)
+	if args.Output == "ansi" {
+		fmt.Println()
+	}
+	return nil
 }
 
 func parseImage(data []byte, options xbin.Options) (*xbin.Image, error) {
