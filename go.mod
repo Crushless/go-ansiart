@@ -1,6 +1,6 @@
 module github.com/Crushless/go-ansiart
 
-go 1.26.3
+go 1.26
 
 require github.com/go-restruct/restruct v1.2.0-alpha
 
