@@ -1,4 +1,5 @@
 [![Go](https://github.com/Crushless/go-ansiart/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/Crushless/go-ansiart/actions/workflows/go.yml)
+[![CodeQL](https://github.com/Crushless/go-ansiart/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/Crushless/go-ansiart/actions/workflows/github-code-scanning/codeql)
 
 # go-ansiart
 
