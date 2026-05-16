@@ -1,3 +1,5 @@
+[![Go](https://github.com/Crushless/go-ansiart/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/Crushless/go-ansiart/actions/workflows/go.yml)
+
 # go-ansiart
 
 Render DOS ANSI art formats as terminal text from Go.
@@ -209,17 +211,17 @@ ansiart.Options{StableColumns: true}
 
 ## Supported Features
 
-| Feature                    | State | Notes                                           |
-| :------------------------- | :---: | :---------------------------------------------- |
-| ANSI byte streams          |  yes  | CP437 text plus common cursor/SGR CSI           |
-| ANSI 24-bit true color SGR |  yes  | foreground and background                       |
-| ANSI 256-color SGR         |  yes  | preserved or converted by color mode            |
-| BIN raw textmode cells     |  yes  | configurable width, defaults to 80              |
-| XBin image data            |  yes  | uncompressed and compressed streams             |
-| XBin embedded palette      |  yes  | used when present                               |
-| XBin embedded fonts        |  yes  | preferred by bitmap/Kitty/Sixel renderers       |
-| Bitmap fallback font       |  yes  | bundled 8x16 PSFU font                          |
-| Kitty graphics protocol    |  yes  | PNG payload generated from bitmap rendering     |
+| Feature                    | State | Notes                                             |
+| :------------------------- | :---: | :------------------------------------------------ |
+| ANSI byte streams          |  yes  | CP437 text plus common cursor/SGR CSI             |
+| ANSI 24-bit true color SGR |  yes  | foreground and background                         |
+| ANSI 256-color SGR         |  yes  | preserved or converted by color mode              |
+| BIN raw textmode cells     |  yes  | configurable width, defaults to 80                |
+| XBin image data            |  yes  | uncompressed and compressed streams               |
+| XBin embedded palette      |  yes  | used when present                                 |
+| XBin embedded fonts        |  yes  | preferred by bitmap/Kitty/Sixel renderers         |
+| Bitmap fallback font       |  yes  | bundled 8x16 PSFU font                            |
+| Kitty graphics protocol    |  yes  | PNG payload generated from bitmap rendering       |
 | Sixel graphics protocol    |  yes  | generated from bitmap rendering, up to 256 colors |
 
 ## Links
