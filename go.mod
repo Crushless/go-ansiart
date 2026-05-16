@@ -1,4 +1,4 @@
-module org.kremm/go-ansiart
+module github.com/Crushless/go-ansiart
 
 go 1.26.3
 

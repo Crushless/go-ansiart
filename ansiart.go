@@ -4,10 +4,10 @@ import (
 	"image"
 	"io"
 
-	ansiparser "org.kremm/go-ansiart/ansi"
-	binparser "org.kremm/go-ansiart/bin"
-	"org.kremm/go-ansiart/shared"
-	xbinparser "org.kremm/go-ansiart/xbin"
+	ansiparser "github.com/Crushless/go-ansiart/ansi"
+	binparser "github.com/Crushless/go-ansiart/bin"
+	"github.com/Crushless/go-ansiart/shared"
+	xbinparser "github.com/Crushless/go-ansiart/xbin"
 )
 
 type Options = shared.Options

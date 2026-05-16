@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
+	xbin "github.com/Crushless/go-ansiart"
+	char_sets "github.com/Crushless/go-ansiart/char_sets"
+	color_modes "github.com/Crushless/go-ansiart/color_modes"
 	"github.com/jessevdk/go-flags"
-	xbin "org.kremm/go-ansiart"
-	char_sets "org.kremm/go-ansiart/char_sets"
-	color_modes "org.kremm/go-ansiart/color_modes"
 )
 
 var args struct {

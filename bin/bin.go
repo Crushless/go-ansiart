@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"org.kremm/go-ansiart/shared"
+	"github.com/Crushless/go-ansiart/shared"
 )
 
 const binDefaultColumns = 80

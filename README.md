@@ -9,7 +9,7 @@ The text renderer maps character bytes through Unicode charset tables. The bitma
 ## Install
 
 ```sh
-go get org.kremm/go-ansiart
+go get github.com/Crushless/go-ansiart
 ```
 
 ## Basic Usage
@@ -22,9 +22,9 @@ import (
 	"log"
 	"os"
 
-	ansiart "org.kremm/go-ansiart"
-	"org.kremm/go-ansiart/char_sets"
-	"org.kremm/go-ansiart/color_modes"
+	ansiart "github.com/Crushless/go-ansiart"
+	"github.com/Crushless/go-ansiart/char_sets"
+	"github.com/Crushless/go-ansiart/color_modes"
 )
 
 func main() {

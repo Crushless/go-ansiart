@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"org.kremm/go-ansiart/color_modes"
-	"org.kremm/go-ansiart/shared"
+	"github.com/Crushless/go-ansiart/color_modes"
+	"github.com/Crushless/go-ansiart/shared"
 )
 
 const (

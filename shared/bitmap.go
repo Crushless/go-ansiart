@@ -9,7 +9,7 @@ import (
 	"image/png"
 	"strings"
 
-	"org.kremm/go-ansiart/color_modes"
+	"github.com/Crushless/go-ansiart/color_modes"
 )
 
 const kittyChunkSize = 4096
