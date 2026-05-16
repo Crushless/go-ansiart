@@ -13,6 +13,7 @@ import (
 
 var args struct {
 	Format              string `short:"f" long:"format" choice:"ansi" choice:"bin" choice:"xbin" description:"input format (ansi, bin or xbin)" default:"ansi"`
+	Output              string `short:"O" long:"output" choice:"ansi" choice:"kitty" choice:"sixel" description:"output format (ansi, kitty or sixel)" default:"ansi"`
 	CharSet             string `short:"s" long:"charset" choice:"cp437" choice:"pet" choice:"amiga"  description:"character set to use for rendering (cp437, pet, amiga)"`
 	Columns             uint   `short:"w" long:"width" description:"number of columns for ANSI stream wrapping (ignored for xbin input)"`
 	ColorMode           string `short:"c" long:"color-mode" choice:"truecolor" choice:"monochrome" choice:"halfbright" description:"color mode to use for rendering (truecolor, monochrome, halfbright"`
@@ -54,49 +55,52 @@ func main() {
 		StableColumns:   args.StableColumns,
 	}
 
+	for _, fileName := range fileNames {
+		data, err := os.ReadFile(fileName)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		img, err := parseImage(data, options)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		rendered, err := renderImage(img, options)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		fmt.Print(rendered)
+		if args.Output == "ansi" {
+			fmt.Println()
+		}
+	}
+}
+
+func parseImage(data []byte, options xbin.Options) (*xbin.Image, error) {
 	switch args.Format {
 	case "ansi":
-		for _, fileName := range fileNames {
-			data, err := os.ReadFile(fileName)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			rendered, err := xbin.DecodeANSI(data, options)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			fmt.Println(rendered)
-		}
+		return xbin.ParseANSI(data, options)
 	case "bin":
-		for _, fileName := range fileNames {
-			data, err := os.ReadFile(fileName)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			rendered, err := xbin.DecodeBIN(data, options)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			fmt.Println(rendered)
-		}
+		return xbin.ParseBIN(data, options)
 	case "xbin":
-		for _, fileName := range fileNames {
-			data, err := os.ReadFile(fileName)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			rendered, err := xbin.Decode(data, options)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			fmt.Println(rendered)
-		}
+		return xbin.Parse(data, options)
+	default:
+		return nil, fmt.Errorf("invalid input format: %q", args.Format)
+	}
+}
+
+func renderImage(img *xbin.Image, options xbin.Options) (string, error) {
+	switch args.Output {
+	case "ansi":
+		return xbin.Render(img, options), nil
+	case "kitty":
+		return xbin.RenderKitty(img, options)
+	case "sixel":
+		return xbin.RenderSixel(img, options)
+	default:
+		return "", fmt.Errorf("invalid output format: %q", args.Output)
 	}
 }
 
